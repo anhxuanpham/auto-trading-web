@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <Navigation />
         <main className="container mx-auto px-4 py-8">
           {children}
