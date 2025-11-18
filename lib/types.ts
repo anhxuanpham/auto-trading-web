@@ -53,3 +53,38 @@ export interface ApiResponse<T> {
   message?: string;
   error?: string;
 }
+
+// Market Data Types
+export type MessageType = 'STOCK_INFO' | 'PRICE_BOARD' | 'ORDER_BOOK';
+
+export interface MarketDataSubscribeRequest {
+  messageType: MessageType;
+  symbol: string;
+}
+
+export interface StockInfo {
+  symbol: string;
+  ceiling: number;
+  floor: number;
+  refPrice: number;
+  lastPrice: number;
+  lastVolume: number;
+  change: number;
+  changePercent: number;
+  totalVolume: number;
+  totalValue: number;
+  high: number;
+  low: number;
+  avgPrice: number;
+  bidPrice1?: number;
+  bidVolume1?: number;
+  askPrice1?: number;
+  askVolume1?: number;
+  timestamp?: string;
+}
+
+export interface MarketDataResponse {
+  messageType: string;
+  symbol: string;
+  data: StockInfo;
+}

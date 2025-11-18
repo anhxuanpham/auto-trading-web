@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { PlaceOrderRequest, Order, Portfolio, UpdateTokenRequest, ApiResponse } from './types';
+import { PlaceOrderRequest, Order, Portfolio, UpdateTokenRequest, ApiResponse, MarketDataSubscribeRequest, StockInfo } from './types';
 
 // Use Next.js proxy in development to avoid CORS issues
 // In production, use the actual backend URL
@@ -86,6 +86,19 @@ class ApiClient {
       }
     );
     return response.data;
+  }
+
+  // Market Data Operations
+  async subscribeMarketData(request: MarketDataSubscribeRequest): Promise<StockInfo> {
+    const response = await this.client.post<StockInfo>('/market-data/subscribe', request);
+    return response.data;
+  }
+
+  async getStockInfo(symbol: string): Promise<StockInfo> {
+    return this.subscribeMarketData({
+      messageType: 'STOCK_INFO',
+      symbol: symbol.toUpperCase(),
+    });
   }
 }
 

@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingCart, History, Settings, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, History, Settings, TrendingUp, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/market-data', label: 'Market Data', icon: Activity },
   { href: '/trading', label: 'Đặt lệnh', icon: ShoppingCart },
   { href: '/orders', label: 'Lịch sử', icon: History },
   { href: '/admin', label: 'Admin', icon: Settings },
