@@ -1,7 +1,11 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { PlaceOrderRequest, Order, Portfolio, UpdateTokenRequest, ApiResponse } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+// Use Next.js proxy in development to avoid CORS issues
+// In production, use the actual backend URL
+const API_BASE_URL = typeof window !== 'undefined'
+  ? '/api'  // Client-side: use Next.js proxy
+  : process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'; // Server-side: direct URL
 
 class ApiClient {
   private client: AxiosInstance;
