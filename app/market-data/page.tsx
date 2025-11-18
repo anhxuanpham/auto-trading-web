@@ -30,10 +30,14 @@ export default function MarketDataPage() {
         messageType,
         symbol: symbol.toUpperCase().trim(),
       });
+      console.log('📊 Market Data Response:', data);
+      console.log('📊 Response Type:', typeof data);
+      console.log('📊 Response Keys:', Object.keys(data || {}));
       setStockInfo(data);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Lỗi khi lấy dữ liệu thị trường');
-      console.error('Error fetching market data:', err);
+      console.error('❌ Error fetching market data:', err);
+      console.error('❌ Error response:', err.response);
     } finally {
       setIsLoading(false);
     }
