@@ -39,18 +39,21 @@ export default function MarketDataPage() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value?: number | null) => {
+    if (value == null) return '-';
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
     }).format(value * 1000); // Giá cổ phiếu thường tính bằng nghìn đồng
   };
 
-  const formatVolume = (value: number) => {
+  const formatVolume = (value?: number | null) => {
+    if (value == null) return '-';
     return new Intl.NumberFormat('vi-VN').format(value);
   };
 
-  const formatValue = (value: number) => {
+  const formatValue = (value?: number | null) => {
+    if (value == null) return '-';
     if (value >= 1000000000) {
       return `${(value / 1000000000).toFixed(2)} tỷ`;
     } else if (value >= 1000000) {
@@ -165,18 +168,18 @@ export default function MarketDataPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Thay đổi</CardTitle>
-                {stockInfo.change >= 0 ? (
+                {(stockInfo.change ?? 0) >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-green-500" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-red-500" />
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${stockInfo.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {stockInfo.change >= 0 ? '+' : ''}{stockInfo.change.toFixed(2)}
+                <div className={`text-2xl font-bold ${(stockInfo.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(stockInfo.change ?? 0) >= 0 ? '+' : ''}{(stockInfo.change ?? 0).toFixed(2)}
                 </div>
-                <p className={`text-xs mt-1 ${stockInfo.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {stockInfo.changePercent >= 0 ? '+' : ''}{stockInfo.changePercent.toFixed(2)}%
+                <p className={`text-xs mt-1 ${(stockInfo.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(stockInfo.changePercent ?? 0) >= 0 ? '+' : ''}{(stockInfo.changePercent ?? 0).toFixed(2)}%
                 </p>
               </CardContent>
             </Card>
