@@ -105,6 +105,21 @@ export interface StockInfo {
   marketId?: string;
   boardId?: string;
   isin?: string;
+
+  // Order book - bid/ask prices and volumes
+  bidPrice1?: number;
+  bidPrice2?: number;
+  bidPrice3?: number;
+  bidVolume1?: number;
+  bidVolume2?: number;
+  bidVolume3?: number;
+
+  askPrice1?: number;
+  askPrice2?: number;
+  askPrice3?: number;
+  askVolume1?: number;
+  askVolume2?: number;
+  askVolume3?: number;
 }
 
 export interface MarketDataResponse {

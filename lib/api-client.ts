@@ -89,16 +89,14 @@ class ApiClient {
   }
 
   // Market Data Operations
-  async subscribeMarketData(request: MarketDataSubscribeRequest): Promise<StockInfo> {
-    const response = await this.client.post<StockInfo>('/market-data/subscribe', request);
+  async initializeMarketData(): Promise<ApiResponse<any>> {
+    const response = await this.client.post<ApiResponse<any>>('/market-data/initialize');
     return response.data;
   }
 
-  async getStockInfo(symbol: string): Promise<StockInfo> {
-    return this.subscribeMarketData({
-      messageType: 'STOCK_INFO',
-      symbol: symbol.toUpperCase(),
-    });
+  async subscribeMarketData(request: MarketDataSubscribeRequest): Promise<ApiResponse<any>> {
+    const response = await this.client.post<ApiResponse<any>>('/market-data/subscribe', request);
+    return response.data;
   }
 }
 

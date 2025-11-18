@@ -1,44 +1,107 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, TrendingUp, TrendingDown, Activity, DollarSign, BarChart2 } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Activity, DollarSign, BarChart2, Wifi, WifiOff } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { StockInfo, MessageType } from '@/lib/types';
+import { useMarketDataWebSocket } from '@/hooks/use-market-data-websocket';
 
 export default function MarketDataPage() {
   const [symbol, setSymbol] = useState('VNM');
   const [messageType, setMessageType] = useState<MessageType>('STOCK_INFO');
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('');
 
-  const fetchMarketData = async () => {
+  // WebSocket connection
+  const handleWebSocketMessage = useCallback((data: StockInfo) => {
+    console.log('📊 Received WebSocket data:', data);
+    setStockInfo(data);
+    setIsLoading(false);
+  }, []);
+
+  const {
+    isConnected,
+    lastMessage,
+    error: wsError,
+    connect: connectWebSocket,
+    disconnect: disconnectWebSocket,
+  } = useMarketDataWebSocket({
+    onMessage: handleWebSocketMessage,
+    onConnect: () => {
+      console.log('✅ WebSocket connected successfully');
+      setError(null);
+    },
+    onDisconnect: () => {
+      console.log('🔌 WebSocket disconnected');
+    },
+    onError: (err) => {
+      console.error('❌ WebSocket error:', err);
+      setError('Lỗi kết nối WebSocket');
+    },
+  });
+
+  // Initialize market data connection on mount
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        setIsInitializing(true);
+        console.log('🔧 Initializing market data connection...');
+        await apiClient.initializeMarketData();
+        console.log('✅ Market data initialized');
+
+        // Connect WebSocket after initialization
+        connectWebSocket();
+      } catch (err: any) {
+        console.error('❌ Failed to initialize market data:', err);
+        setError(err.response?.data?.detail || err.message || 'Lỗi khởi tạo kết nối');
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initialize();
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [connectWebSocket, disconnectWebSocket]);
+
+  const subscribeToSymbol = async () => {
     if (!symbol.trim()) {
       setError('Vui lòng nhập mã chứng khoán');
+      return;
+    }
+
+    if (!isConnected) {
+      setError('WebSocket chưa kết nối. Vui lòng đợi...');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      const data = await apiClient.subscribeMarketData({
+      setSubscriptionStatus('');
+
+      const response = await apiClient.subscribeMarketData({
         messageType,
         symbol: symbol.toUpperCase().trim(),
       });
-      console.log('📊 Market Data Response:', data);
-      console.log('📊 Response Type:', typeof data);
-      console.log('📊 Response Keys:', Object.keys(data || {}));
-      setStockInfo(data);
+
+      console.log('✅ Subscription response:', response);
+      setSubscriptionStatus(response.message || 'Đã đăng ký thành công');
+
+      // Data will come through WebSocket
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Lỗi khi lấy dữ liệu thị trường');
-      console.error('❌ Error fetching market data:', err);
-      console.error('❌ Error response:', err.response);
-    } finally {
+      setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
+      console.error('❌ Error subscribing to market data:', err);
       setIsLoading(false);
     }
   };
@@ -86,9 +149,24 @@ export default function MarketDataPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Market Data</h1>
-        <p className="text-muted-foreground">Dữ liệu thị trường real-time</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Market Data</h1>
+          <p className="text-muted-foreground">Dữ liệu thị trường real-time</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <Badge variant="default" className="gap-1">
+              <Wifi className="h-3 w-3" />
+              Đã kết nối
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="gap-1">
+              <WifiOff className="h-3 w-3" />
+              {isInitializing ? 'Đang kết nối...' : 'Ngắt kết nối'}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Search Form */}
@@ -107,8 +185,9 @@ export default function MarketDataPage() {
                   placeholder="VD: VNM, HPG, VCB..."
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchMarketData()}
+                  onKeyDown={(e) => e.key === 'Enter' && subscribeToSymbol()}
                   className="uppercase"
+                  disabled={!isConnected || isInitializing}
                 />
               </div>
 
@@ -122,6 +201,7 @@ export default function MarketDataPage() {
                       size="sm"
                       variant={messageType === type.value ? 'default' : 'outline'}
                       onClick={() => setMessageType(type.value)}
+                      disabled={!isConnected || isInitializing}
                     >
                       {type.label}
                     </Button>
@@ -130,21 +210,31 @@ export default function MarketDataPage() {
               </div>
 
               <div className="flex items-end">
-                <Button onClick={fetchMarketData} disabled={isLoading} className="w-full">
+                <Button
+                  onClick={subscribeToSymbol}
+                  disabled={!isConnected || isLoading || isInitializing}
+                  className="w-full"
+                >
                   {isLoading ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Đang tải...
+                      Đang đăng ký...
                     </>
                   ) : (
                     <>
                       <Activity className="mr-2 h-4 w-4" />
-                      Xem dữ liệu
+                      Đăng ký
                     </>
                   )}
                 </Button>
               </div>
             </div>
+
+            {subscriptionStatus && (
+              <div className="p-3 rounded-md bg-green-500/10 text-green-600 text-sm">
+                {subscriptionStatus}
+              </div>
+            )}
 
             {error && (
               <div className="p-3 rounded-md bg-red-500/10 text-red-600 text-sm">
@@ -294,11 +384,15 @@ export default function MarketDataPage() {
             <CardTitle>Hướng dẫn sử dụng</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>1. Nhập mã chứng khoán bạn muốn tra cứu (VD: VNM, HPG, VCB)</p>
-            <p>2. Chọn loại dữ liệu muốn xem (mặc định: Thông tin cổ phiếu)</p>
-            <p>3. Nhấn "Xem dữ liệu" hoặc Enter để lấy thông tin real-time</p>
-            <p className="mt-4 text-yellow-600">
-              <strong>Lưu ý:</strong> Dữ liệu được cung cấp bởi DNSE Lightspeed API và có thể có độ trễ vài giây.
+            <p>1. Đợi hệ thống kết nối WebSocket (biểu tượng <Wifi className="inline h-3 w-3" /> màu xanh)</p>
+            <p>2. Nhập mã chứng khoán bạn muốn tra cứu (VD: VNM, HPG, VCB)</p>
+            <p>3. Chọn loại dữ liệu muốn xem (mặc định: Thông tin cổ phiếu)</p>
+            <p>4. Nhấn "Đăng ký" hoặc Enter để nhận dữ liệu real-time streaming</p>
+            <p className="mt-4 text-blue-600">
+              <strong>WebSocket Real-time:</strong> Dữ liệu được stream trực tiếp qua WebSocket từ DNSE Lightspeed API.
+            </p>
+            <p className="text-yellow-600">
+              <strong>Lưu ý:</strong> Phải khởi động backend trước và đảm bảo đã cấu hình token DNSE đúng.
             </p>
           </CardContent>
         </Card>
