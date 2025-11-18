@@ -62,10 +62,16 @@ export default function MarketDataPage() {
     return formatVolume(value);
   };
 
-  const getPriceColor = (price: number, refPrice: number) => {
+  const getPriceColor = (price?: number, refPrice?: number) => {
+    if (price == null || refPrice == null) return '';
     if (price > refPrice) return 'text-green-500';
     if (price < refPrice) return 'text-red-500';
     return 'text-yellow-500';
+  };
+
+  const parseVolume = (volume?: string | number) => {
+    if (volume == null) return 0;
+    return typeof volume === 'string' ? parseInt(volume) : volume;
   };
 
   const messageTypes: { value: MessageType; label: string }[] = [
@@ -156,11 +162,11 @@ export default function MarketDataPage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${getPriceColor(stockInfo.lastPrice, stockInfo.refPrice)}`}>
-                  {formatCurrency(stockInfo.lastPrice)}
+                <div className={`text-2xl font-bold ${getPriceColor(stockInfo.matchPrice, stockInfo.referencePrice)}`}>
+                  {formatCurrency(stockInfo.matchPrice)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Khối lượng: {formatVolume(stockInfo.lastVolume)}
+                  Khối lượng: {formatVolume(parseVolume(stockInfo.matchQuantity))}
                 </p>
               </CardContent>
             </Card>
@@ -168,18 +174,18 @@ export default function MarketDataPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Thay đổi</CardTitle>
-                {(stockInfo.change ?? 0) >= 0 ? (
+                {(stockInfo.changedValue ?? 0) >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-green-500" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-red-500" />
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${(stockInfo.change ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {(stockInfo.change ?? 0) >= 0 ? '+' : ''}{(stockInfo.change ?? 0).toFixed(2)}
+                <div className={`text-2xl font-bold ${(stockInfo.changedValue ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(stockInfo.changedValue ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedValue ?? 0).toFixed(2)}
                 </div>
-                <p className={`text-xs mt-1 ${(stockInfo.changePercent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {(stockInfo.changePercent ?? 0) >= 0 ? '+' : ''}{(stockInfo.changePercent ?? 0).toFixed(2)}%
+                <p className={`text-xs mt-1 ${(stockInfo.changedRatio ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(stockInfo.changedRatio ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedRatio ?? 0).toFixed(2)}%
                 </p>
               </CardContent>
             </Card>
@@ -190,9 +196,9 @@ export default function MarketDataPage() {
                 <BarChart2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatVolume(stockInfo.totalVolume)}</div>
+                <div className="text-2xl font-bold">{formatVolume(parseVolume(stockInfo.totalVolumeTraded))}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Giá trị: {formatValue(stockInfo.totalValue)}
+                  Giá trị: {formatValue(stockInfo.grossTradeAmount * 1000000000)}
                 </p>
               </CardContent>
             </Card>
@@ -203,9 +209,9 @@ export default function MarketDataPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stockInfo.avgPrice)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(stockInfo.averagePrice)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Tham chiếu: {formatCurrency(stockInfo.refPrice)}
+                  Tham chiếu: {formatCurrency(stockInfo.referencePrice)}
                 </p>
               </CardContent>
             </Card>
@@ -221,19 +227,19 @@ export default function MarketDataPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Trần</p>
-                  <p className="text-lg font-semibold text-purple-500">{formatCurrency(stockInfo.ceiling)}</p>
+                  <p className="text-lg font-semibold text-purple-500">{formatCurrency(stockInfo.highLimitPrice)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Sàn</p>
-                  <p className="text-lg font-semibold text-blue-500">{formatCurrency(stockInfo.floor)}</p>
+                  <p className="text-lg font-semibold text-blue-500">{formatCurrency(stockInfo.lowLimitPrice)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Cao nhất</p>
-                  <p className="text-lg font-semibold text-green-500">{formatCurrency(stockInfo.high)}</p>
+                  <p className="text-lg font-semibold text-green-500">{formatCurrency(stockInfo.highestPrice)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Thấp nhất</p>
-                  <p className="text-lg font-semibold text-red-500">{formatCurrency(stockInfo.low)}</p>
+                  <p className="text-lg font-semibold text-red-500">{formatCurrency(stockInfo.lowestPrice)}</p>
                 </div>
               </div>
             </CardContent>

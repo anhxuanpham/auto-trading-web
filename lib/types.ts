@@ -62,25 +62,49 @@ export interface MarketDataSubscribeRequest {
   symbol: string;
 }
 
+// Raw API response from DNSE backend
 export interface StockInfo {
   symbol: string;
-  ceiling: number;
-  floor: number;
-  refPrice: number;
-  lastPrice: number;
-  lastVolume: number;
-  change: number;
-  changePercent: number;
-  totalVolume: number;
-  totalValue: number;
-  high: number;
-  low: number;
-  avgPrice: number;
-  bidPrice1?: number;
-  bidVolume1?: number;
-  askPrice1?: number;
-  askVolume1?: number;
-  timestamp?: string;
+  // Price limits
+  highLimitPrice: number;  // Giá trần
+  lowLimitPrice: number;   // Giá sàn
+  referencePrice: number;  // Giá tham chiếu
+
+  // Current prices
+  matchPrice: number;      // Giá khớp lệnh hiện tại
+  matchQuantity: string;   // Khối lượng khớp
+  matchValue: number;      // Giá trị khớp
+
+  // Day high/low
+  highestPrice: number;    // Giá cao nhất
+  lowestPrice: number;     // Giá thấp nhất
+  openPrice: number;       // Giá mở cửa
+  closePrice: number;      // Giá đóng cửa
+  averagePrice: number;    // Giá trung bình
+
+  // Volume and value
+  totalVolumeTraded: string;  // Tổng khối lượng giao dịch
+  grossTradeAmount: number;   // Tổng giá trị giao dịch
+
+  // Change
+  changedValue: number;    // Thay đổi giá trị
+  changedRatio: number;    // Thay đổi %
+
+  // Trading session info
+  tradingTime?: string;
+  tradingSessionId?: string;
+  securityStatus?: string;
+
+  // Foreign trading
+  buyForeignQuantity?: string;
+  sellForeignQuantity?: string;
+  buyForeignValue?: number;
+  sellForeignValue?: number;
+
+  // Market data
+  marketId?: string;
+  boardId?: string;
+  isin?: string;
 }
 
 export interface MarketDataResponse {
