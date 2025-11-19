@@ -81,12 +81,15 @@ export default function MarketDataPage() {
       return;
     }
 
+    // Clear old data immediately when symbol changes
+    setStockInfo(null);
+    setSubscriptionStatus('');
+
     // Debounce to avoid subscribing while user is still typing
     const timer = setTimeout(async () => {
       try {
         setIsLoading(true);
         setError(null);
-        setSubscriptionStatus('');
 
         console.log('🔄 Auto-subscribing to:', symbol.toUpperCase().trim());
         const response = await apiClient.subscribeMarketData({
