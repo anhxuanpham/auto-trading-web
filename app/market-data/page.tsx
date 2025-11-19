@@ -151,12 +151,6 @@ export default function MarketDataPage() {
     return typeof volume === 'string' ? parseInt(volume) : volume;
   };
 
-  const messageTypes: { value: MessageType; label: string }[] = [
-    { value: 'STOCK_INFO', label: 'Thông tin' },
-    { value: 'PRICE_BOARD', label: 'Bảng giá' },
-    { value: 'ORDER_BOOK', label: 'Sổ lệnh' },
-  ];
-
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Simple Header */}
@@ -186,38 +180,19 @@ export default function MarketDataPage() {
       {/* Clean Search Form */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="symbol" className="text-sm font-medium text-slate-700 mb-2 block">
-                Mã chứng khoán
-              </Label>
-              <Input
-                id="symbol"
-                placeholder="VNM, HPG, VCB..."
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                className="h-11 text-base font-semibold uppercase"
-                disabled={!isConnected || isInitializing}
-                autoFocus
-              />
-            </div>
-            <div className="flex-1">
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">Loại dữ liệu</Label>
-              <div className="flex gap-2">
-                {messageTypes.map((type) => (
-                  <Button
-                    key={type.value}
-                    size="sm"
-                    variant={messageType === type.value ? 'default' : 'outline'}
-                    onClick={() => setMessageType(type.value)}
-                    disabled={!isConnected || isInitializing}
-                    className="flex-1"
-                  >
-                    {type.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
+          <div>
+            <Label htmlFor="symbol" className="text-sm font-medium text-slate-700 mb-2 block">
+              Mã chứng khoán
+            </Label>
+            <Input
+              id="symbol"
+              placeholder="VNM, HPG, VCB..."
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              className="h-11 text-base font-semibold uppercase"
+              disabled={!isConnected || isInitializing}
+              autoFocus
+            />
           </div>
 
           {isLoading && (
