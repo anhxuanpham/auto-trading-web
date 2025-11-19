@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, TrendingUp, TrendingDown, Activity, DollarSign, BarChart2, Wifi, WifiOff, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Activity, Wifi, WifiOff, Zap } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { StockInfo, MessageType } from '@/lib/types';
 import { useMarketDataWebSocket } from '@/hooks/use-market-data-websocket';
@@ -133,17 +133,17 @@ export default function MarketDataPage() {
   };
 
   const getPriceColor = (price?: number, refPrice?: number) => {
-    if (price == null || refPrice == null) return '';
-    if (price > refPrice) return 'text-emerald-500';
-    if (price < refPrice) return 'text-rose-500';
-    return 'text-amber-500';
+    if (price == null || refPrice == null) return 'text-slate-600';
+    if (price > refPrice) return 'text-green-600';
+    if (price < refPrice) return 'text-red-600';
+    return 'text-amber-600';
   };
 
   const getPriceBg = (price?: number, refPrice?: number) => {
-    if (price == null || refPrice == null) return 'from-slate-500/20 to-slate-600/20';
-    if (price > refPrice) return 'from-emerald-500/20 to-green-600/20';
-    if (price < refPrice) return 'from-rose-500/20 to-red-600/20';
-    return 'from-amber-500/20 to-yellow-600/20';
+    if (price == null || refPrice == null) return 'bg-slate-50';
+    if (price > refPrice) return 'bg-green-50';
+    if (price < refPrice) return 'bg-red-50';
+    return 'bg-amber-50';
   };
 
   const parseVolume = (volume?: string | number) => {
@@ -152,289 +152,223 @@ export default function MarketDataPage() {
   };
 
   const messageTypes: { value: MessageType; label: string }[] = [
-    { value: 'STOCK_INFO', label: 'Thông tin cổ phiếu' },
+    { value: 'STOCK_INFO', label: 'Thông tin' },
     { value: 'PRICE_BOARD', label: 'Bảng giá' },
     { value: 'ORDER_BOOK', label: 'Sổ lệnh' },
   ];
 
   return (
-    <div className="space-y-8 pb-8">
-      {/* Header with gradient */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 shadow-2xl">
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,black)]"></div>
-        <div className="relative flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-white flex items-center gap-3">
-              <Zap className="h-8 w-8 text-yellow-300 animate-pulse" />
-              Market Data Live
-            </h1>
-            <p className="text-blue-100 mt-2 text-lg">Dữ liệu thị trường real-time từ DNSE</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {isConnected ? (
-              <Badge className="gap-2 px-4 py-2 text-sm bg-green-500/20 text-green-100 border-green-400/50 animate-pulse">
-                <Wifi className="h-4 w-4" />
-                <span className="font-semibold">Connected</span>
-              </Badge>
-            ) : (
-              <Badge className="gap-2 px-4 py-2 text-sm bg-red-500/20 text-red-100 border-red-400/50">
-                <WifiOff className="h-4 w-4" />
-                <span className="font-semibold">{isInitializing ? 'Connecting...' : 'Disconnected'}</span>
-              </Badge>
-            )}
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Simple Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+            <Activity className="h-7 w-7 text-blue-600" />
+            Market Data
+          </h1>
+          <p className="text-slate-500 mt-1">Real-time market streaming</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {isConnected ? (
+            <Badge variant="default" className="gap-1.5 px-3 py-1.5">
+              <Wifi className="h-3.5 w-3.5" />
+              Live
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="gap-1.5 px-3 py-1.5">
+              <WifiOff className="h-3.5 w-3.5" />
+              {isInitializing ? 'Connecting' : 'Offline'}
+            </Badge>
+          )}
         </div>
       </div>
 
-      {/* Search Form with glass morphism */}
-      <Card className="border-2 shadow-xl backdrop-blur-sm bg-white/50 dark:bg-slate-900/50">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Activity className="h-6 w-6 text-blue-600" />
-            Tra cứu chứng khoán
-          </CardTitle>
-          <CardDescription className="text-base">Nhập mã và nhận dữ liệu tự động</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="symbol" className="text-base font-semibold">Mã chứng khoán</Label>
-                <Input
-                  id="symbol"
-                  placeholder="VNM, HPG, VCB..."
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  className="uppercase h-12 text-lg font-bold border-2 focus:ring-4 transition-all"
-                  disabled={!isConnected || isInitializing}
-                  autoFocus
-                />
-                {isLoading && (
-                  <p className="text-sm text-blue-600 flex items-center gap-2 font-medium">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Đang đăng ký dữ liệu...
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Loại dữ liệu</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {messageTypes.map((type) => (
-                    <Button
-                      key={type.value}
-                      type="button"
-                      size="lg"
-                      variant={messageType === type.value ? 'default' : 'outline'}
-                      onClick={() => setMessageType(type.value)}
-                      disabled={!isConnected || isInitializing}
-                      className={messageType === type.value ? 'shadow-lg shadow-blue-500/50' : ''}
-                    >
-                      {type.label}
-                    </Button>
-                  ))}
-                </div>
+      {/* Clean Search Form */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="symbol" className="text-sm font-medium text-slate-700 mb-2 block">
+                Mã chứng khoán
+              </Label>
+              <Input
+                id="symbol"
+                placeholder="VNM, HPG, VCB..."
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                className="h-11 text-base font-semibold uppercase"
+                disabled={!isConnected || isInitializing}
+                autoFocus
+              />
+            </div>
+            <div className="flex-1">
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">Loại dữ liệu</Label>
+              <div className="flex gap-2">
+                {messageTypes.map((type) => (
+                  <Button
+                    key={type.value}
+                    size="sm"
+                    variant={messageType === type.value ? 'default' : 'outline'}
+                    onClick={() => setMessageType(type.value)}
+                    disabled={!isConnected || isInitializing}
+                    className="flex-1"
+                  >
+                    {type.label}
+                  </Button>
+                ))}
               </div>
             </div>
-
-            {subscriptionStatus && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/20 text-green-700 font-semibold flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                {subscriptionStatus}
-              </div>
-            )}
-
-            {error && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-rose-500/10 border-2 border-red-500/20 text-red-700 font-semibold">
-                {error}
-              </div>
-            )}
           </div>
+
+          {isLoading && (
+            <p className="text-sm text-blue-600 flex items-center gap-2 mt-3">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              Đang tải dữ liệu...
+            </p>
+          )}
+
+          {subscriptionStatus && (
+            <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              {subscriptionStatus}
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+              {error}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Stock Info Display */}
       {stockInfo && (
-        <>
-          {/* Price Overview with gradients */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {/* Current Price Card */}
-            <Card className={`border-2 shadow-2xl bg-gradient-to-br ${getPriceBg(stockInfo.matchPrice, stockInfo.referencePrice)} hover:scale-105 transition-transform duration-300`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wide">Giá hiện tại</CardTitle>
-                <Activity className="h-5 w-5 text-blue-600 animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-4xl font-black ${getPriceColor(stockInfo.matchPrice, stockInfo.referencePrice)} transition-all duration-500`}>
-                  {formatCurrency(stockInfo.matchPrice)}
-                </div>
-                <p className="text-sm font-semibold text-slate-600 mt-2">
-                  Vol: {formatVolume(parseVolume(stockInfo.matchQuantity))}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Change Card */}
-            <Card className={`border-2 shadow-2xl ${(stockInfo.changedValue ?? 0) >= 0 ? 'bg-gradient-to-br from-green-500/20 to-emerald-600/20' : 'bg-gradient-to-br from-red-500/20 to-rose-600/20'} hover:scale-105 transition-transform duration-300`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wide">Thay đổi</CardTitle>
-                {(stockInfo.changedValue ?? 0) >= 0 ? (
-                  <ArrowUpRight className="h-6 w-6 text-green-600 animate-bounce" />
-                ) : (
-                  <ArrowDownRight className="h-6 w-6 text-red-600 animate-bounce" />
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className={`text-4xl font-black ${(stockInfo.changedValue ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'} transition-all duration-500`}>
-                  {(stockInfo.changedValue ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedValue ?? 0).toFixed(2)}
-                </div>
-                <p className={`text-lg font-bold mt-2 ${(stockInfo.changedRatio ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {(stockInfo.changedRatio ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedRatio ?? 0).toFixed(2)}%
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Volume Card */}
-            <Card className="border-2 shadow-2xl bg-gradient-to-br from-purple-500/20 to-pink-600/20 hover:scale-105 transition-transform duration-300">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wide">Khối lượng GD</CardTitle>
-                <BarChart2 className="h-5 w-5 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-purple-700 transition-all duration-500">
-                  {formatVolume(parseVolume(stockInfo.totalVolumeTraded))}
-                </div>
-                <p className="text-sm font-semibold text-slate-600 mt-2">
-                  {formatValue(stockInfo.grossTradeAmount * 1000000000)}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Average Price Card */}
-            <Card className="border-2 shadow-2xl bg-gradient-to-br from-amber-500/20 to-orange-600/20 hover:scale-105 transition-transform duration-300">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wide">Giá TB</CardTitle>
-                <DollarSign className="h-5 w-5 text-amber-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-amber-700 transition-all duration-500">
-                  {formatCurrency(stockInfo.averagePrice)}
-                </div>
-                <p className="text-sm font-semibold text-slate-600 mt-2">
-                  TC: {formatCurrency(stockInfo.referencePrice)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Detailed Info with better styling */}
-          <Card className="border-2 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
-              <CardTitle className="text-2xl flex items-center gap-2">
-                📊 Chi tiết {stockInfo.symbol}
-              </CardTitle>
-              <CardDescription className="text-base">Thông tin đầy đủ về giá giao dịch</CardDescription>
-            </CardHeader>
+        <div className="space-y-6">
+          {/* Main Price Card */}
+          <Card className={`border-2 ${getPriceBg(stockInfo.matchPrice, stockInfo.referencePrice)}`}>
             <CardContent className="pt-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="p-4 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-purple-800/20 border-2 border-purple-200 dark:border-purple-700">
-                  <p className="text-sm font-bold text-purple-600 mb-2">⬆️ TRẦN</p>
-                  <p className="text-2xl font-black text-purple-700">{formatCurrency(stockInfo.highLimitPrice)}</p>
+              <div className="flex items-baseline justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-medium text-slate-600 mb-1">{stockInfo.symbol}</h2>
+                  <div className={`text-5xl font-bold ${getPriceColor(stockInfo.matchPrice, stockInfo.referencePrice)}`}>
+                    {formatCurrency(stockInfo.matchPrice)}
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 border-2 border-blue-200 dark:border-blue-700">
-                  <p className="text-sm font-bold text-blue-600 mb-2">⬇️ SÀN</p>
-                  <p className="text-2xl font-black text-blue-700">{formatCurrency(stockInfo.lowLimitPrice)}</p>
+                <div className="text-right">
+                  <div className={`text-2xl font-semibold ${(stockInfo.changedValue ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center gap-1`}>
+                    {(stockInfo.changedValue ?? 0) >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
+                    {(stockInfo.changedValue ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedValue ?? 0).toFixed(2)}
+                  </div>
+                  <div className={`text-lg font-medium ${(stockInfo.changedRatio ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(stockInfo.changedRatio ?? 0) >= 0 ? '+' : ''}{(stockInfo.changedRatio ?? 0).toFixed(2)}%
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-800/20 border-2 border-green-200 dark:border-green-700">
-                  <p className="text-sm font-bold text-green-600 mb-2">📈 CAO NHẤT</p>
-                  <p className="text-2xl font-black text-green-700">{formatCurrency(stockInfo.highestPrice)}</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Khối lượng</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {formatVolume(parseVolume(stockInfo.matchQuantity))}
+                  </p>
                 </div>
-                <div className="p-4 rounded-xl bg-gradient-to-br from-red-100 to-red-50 dark:from-red-900/20 dark:to-red-800/20 border-2 border-red-200 dark:border-red-700">
-                  <p className="text-sm font-bold text-red-600 mb-2">📉 THẤP NHẤT</p>
-                  <p className="text-2xl font-black text-red-700">{formatCurrency(stockInfo.lowestPrice)}</p>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Giá TB</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {formatCurrency(stockInfo.averagePrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Tổng KL</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {formatVolume(parseVolume(stockInfo.totalVolumeTraded))}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Order Book Preview with enhanced styling */}
+          {/* Price Range */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Biên độ giá</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="text-center p-3 rounded-lg bg-purple-50 border border-purple-200">
+                  <p className="text-xs text-purple-600 font-medium mb-1">Trần</p>
+                  <p className="text-sm font-bold text-purple-700">{formatCurrency(stockInfo.highLimitPrice)}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-green-50 border border-green-200">
+                  <p className="text-xs text-green-600 font-medium mb-1">Cao</p>
+                  <p className="text-sm font-bold text-green-700">{formatCurrency(stockInfo.highestPrice)}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-red-50 border border-red-200">
+                  <p className="text-xs text-red-600 font-medium mb-1">Thấp</p>
+                  <p className="text-sm font-bold text-red-700">{formatCurrency(stockInfo.lowestPrice)}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-xs text-blue-600 font-medium mb-1">Sàn</p>
+                  <p className="text-sm font-bold text-blue-700">{formatCurrency(stockInfo.lowLimitPrice)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Order Book */}
           {(stockInfo.bidPrice1 || stockInfo.askPrice1) && (
-            <Card className="border-2 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
-                <CardTitle className="text-2xl">🎯 Giá mua/bán tốt nhất</CardTitle>
-                <CardDescription className="text-base">Best Bid/Ask Prices</CardDescription>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Giá mua/bán tốt nhất</CardTitle>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Bid */}
-                  <div className="space-y-3">
-                    <p className="text-sm font-bold text-green-600 uppercase tracking-wide flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                    <p className="text-xs text-green-600 font-medium mb-2 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
                       Mua (Bid)
                     </p>
-                    <div className="flex justify-between items-center p-6 bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-2xl border-2 border-green-500/30 shadow-lg hover:shadow-green-500/50 transition-all">
-                      <span className="text-3xl font-black text-green-700">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-xl font-bold text-green-700">
                         {stockInfo.bidPrice1 ? formatCurrency(stockInfo.bidPrice1) : '-'}
                       </span>
-                      <Badge className="text-base px-4 py-2 bg-green-600 text-white font-bold">
+                      <span className="text-sm font-semibold text-green-600">
                         {stockInfo.bidVolume1 ? formatVolume(stockInfo.bidVolume1) : '-'}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
-                  {/* Ask */}
-                  <div className="space-y-3">
-                    <p className="text-sm font-bold text-red-600 uppercase tracking-wide flex items-center gap-2">
-                      <TrendingDown className="h-4 w-4" />
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                    <p className="text-xs text-red-600 font-medium mb-2 flex items-center gap-1">
+                      <TrendingDown className="h-3 w-3" />
                       Bán (Ask)
                     </p>
-                    <div className="flex justify-between items-center p-6 bg-gradient-to-br from-red-500/20 to-rose-600/20 rounded-2xl border-2 border-red-500/30 shadow-lg hover:shadow-red-500/50 transition-all">
-                      <span className="text-3xl font-black text-red-700">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-xl font-bold text-red-700">
                         {stockInfo.askPrice1 ? formatCurrency(stockInfo.askPrice1) : '-'}
                       </span>
-                      <Badge className="text-base px-4 py-2 bg-red-600 text-white font-bold">
+                      <span className="text-sm font-semibold text-red-600">
                         {stockInfo.askVolume1 ? formatVolume(stockInfo.askVolume1) : '-'}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-        </>
+        </div>
       )}
 
-      {/* Instructions with better design */}
+      {/* Clean Instructions */}
       {!stockInfo && !error && (
-        <Card className="border-2 shadow-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              💡 Hướng dẫn sử dụng
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-base">
-            <div className="flex items-start gap-3 p-4 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-              <span className="text-2xl">1️⃣</span>
-              <p className="text-slate-700 dark:text-slate-300">
-                Đợi hệ thống kết nối WebSocket (biểu tượng <Wifi className="inline h-4 w-4 text-green-500" /> màu xanh)
-              </p>
-            </div>
-            <div className="flex items-start gap-3 p-4 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-              <span className="text-2xl">2️⃣</span>
-              <p className="text-slate-700 dark:text-slate-300">
-                Nhập mã chứng khoán (VD: <strong className="text-blue-600">VNM, HPG, VCB</strong>) - hệ thống sẽ <strong className="text-green-600">tự động đăng ký</strong> sau 0.8 giây
-              </p>
-            </div>
-            <div className="flex items-start gap-3 p-4 bg-white/50 dark:bg-slate-800/50 rounded-xl">
-              <span className="text-2xl">3️⃣</span>
-              <p className="text-slate-700 dark:text-slate-300">
-                Dữ liệu sẽ được <strong className="text-purple-600">stream real-time</strong> và tự động cập nhật liên tục!
-              </p>
-            </div>
-            <div className="mt-6 p-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-              <p className="font-bold text-lg flex items-center gap-2">
-                <Zap className="h-5 w-5 text-yellow-300" />
-                ✨ Auto-subscribe: Chỉ cần nhập mã, hệ thống tự động xử lý tất cả!
-              </p>
+        <Card className="bg-blue-50/50 border-blue-100">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3 text-sm text-slate-700">
+              <Zap className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium">Chỉ cần nhập mã chứng khoán để bắt đầu</p>
+                <p className="text-slate-600">Dữ liệu sẽ được cập nhật real-time qua WebSocket</p>
+              </div>
             </div>
           </CardContent>
         </Card>
