@@ -74,37 +74,37 @@ export default function MarketDataPage() {
     };
   }, [connectWebSocket, disconnectWebSocket]);
 
-  const subscribeToSymbol = async () => {
-    if (!symbol.trim()) {
-      setError('Vui lòng nhập mã chứng khoán');
+  // Auto-subscribe when symbol changes (with debounce)
+  useEffect(() => {
+    // Don't subscribe if not connected or no symbol
+    if (!isConnected || !symbol.trim()) {
       return;
     }
 
-    if (!isConnected) {
-      setError('WebSocket chưa kết nối. Vui lòng đợi...');
-      return;
-    }
+    // Debounce to avoid subscribing while user is still typing
+    const timer = setTimeout(async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        setSubscriptionStatus('');
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      setSubscriptionStatus('');
+        console.log('🔄 Auto-subscribing to:', symbol.toUpperCase().trim());
+        const response = await apiClient.subscribeMarketData({
+          messageType,
+          symbol: symbol.toUpperCase().trim(),
+        });
 
-      const response = await apiClient.subscribeMarketData({
-        messageType,
-        symbol: symbol.toUpperCase().trim(),
-      });
+        console.log('✅ Subscription response:', response);
+        setSubscriptionStatus(`Đang theo dõi ${symbol.toUpperCase()}`);
+      } catch (err: any) {
+        setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
+        console.error('❌ Error subscribing to market data:', err);
+        setIsLoading(false);
+      }
+    }, 800); // 800ms debounce
 
-      console.log('✅ Subscription response:', response);
-      setSubscriptionStatus(response.message || 'Đã đăng ký thành công');
-
-      // Data will come through WebSocket
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
-      console.error('❌ Error subscribing to market data:', err);
-      setIsLoading(false);
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [symbol, messageType, isConnected]);
 
   const formatCurrency = (value?: number | null) => {
     if (value == null) return '-';
@@ -173,11 +173,11 @@ export default function MarketDataPage() {
       <Card>
         <CardHeader>
           <CardTitle>Tra cứu thông tin chứng khoán</CardTitle>
-          <CardDescription>Nhập mã chứng khoán để xem thông tin chi tiết</CardDescription>
+          <CardDescription>Nhập mã chứng khoán để tự động nhận dữ liệu real-time</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="symbol">Mã chứng khoán</Label>
                 <Input
@@ -185,10 +185,16 @@ export default function MarketDataPage() {
                   placeholder="VD: VNM, HPG, VCB..."
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === 'Enter' && subscribeToSymbol()}
                   className="uppercase"
                   disabled={!isConnected || isInitializing}
+                  autoFocus
                 />
+                {isLoading && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Đang đăng ký dữ liệu...
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -207,26 +213,6 @@ export default function MarketDataPage() {
                     </Button>
                   ))}
                 </div>
-              </div>
-
-              <div className="flex items-end">
-                <Button
-                  onClick={subscribeToSymbol}
-                  disabled={!isConnected || isLoading || isInitializing}
-                  className="w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Đang đăng ký...
-                    </>
-                  ) : (
-                    <>
-                      <Activity className="mr-2 h-4 w-4" />
-                      Đăng ký
-                    </>
-                  )}
-                </Button>
               </div>
             </div>
 
@@ -385,11 +371,10 @@ export default function MarketDataPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>1. Đợi hệ thống kết nối WebSocket (biểu tượng <Wifi className="inline h-3 w-3" /> màu xanh)</p>
-            <p>2. Nhập mã chứng khoán bạn muốn tra cứu (VD: VNM, HPG, VCB)</p>
-            <p>3. Chọn loại dữ liệu muốn xem (mặc định: Thông tin cổ phiếu)</p>
-            <p>4. Nhấn "Đăng ký" hoặc Enter để nhận dữ liệu real-time streaming</p>
+            <p>2. Nhập mã chứng khoán (VD: VNM, HPG, VCB) - hệ thống sẽ <strong className="text-blue-600">tự động đăng ký</strong> sau 0.8 giây</p>
+            <p>3. Dữ liệu sẽ được stream real-time và tự động cập nhật</p>
             <p className="mt-4 text-blue-600">
-              <strong>WebSocket Real-time:</strong> Dữ liệu được stream trực tiếp qua WebSocket từ DNSE Lightspeed API.
+              <strong>✨ Auto-subscribe:</strong> Chỉ cần nhập mã, hệ thống tự động đăng ký nhận dữ liệu qua WebSocket!
             </p>
             <p className="text-yellow-600">
               <strong>Lưu ý:</strong> Phải khởi động backend trước và đảm bảo đã cấu hình token DNSE đúng.
