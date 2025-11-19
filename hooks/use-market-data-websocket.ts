@@ -33,6 +33,20 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000;
 
+  // Use refs for callbacks to avoid recreating connect/disconnect functions
+  const onMessageRef = useRef(onMessage);
+  const onErrorRef = useRef(onError);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+    onErrorRef.current = onError;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+  }, [onMessage, onError, onConnect, onDisconnect]);
+
   const connect = useCallback(() => {
     try {
       // Use ws:// for localhost, wss:// for production
@@ -47,7 +61,7 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        onConnect?.();
+        onConnectRef.current?.();
       };
 
       ws.onmessage = (event) => {
@@ -57,7 +71,7 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
 
           if (message.type && message.data) {
             setLastMessage(message.data);
-            onMessage?.(message.data);
+            onMessageRef.current?.(message.data);
           }
         } catch (err) {
           console.error('❌ Error parsing WebSocket message:', err);
@@ -67,14 +81,14 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
       ws.onerror = (event) => {
         console.error('❌ WebSocket error:', event);
         setError('Lỗi kết nối WebSocket');
-        onError?.(event);
+        onErrorRef.current?.(event);
       };
 
       ws.onclose = () => {
         console.log('🔌 WebSocket disconnected');
         setIsConnected(false);
         wsRef.current = null;
-        onDisconnect?.();
+        onDisconnectRef.current?.();
 
         // Auto-reconnect if enabled and not exceeded max attempts
         if (autoReconnect && reconnectAttemptsRef.current < maxReconnectAttempts) {
@@ -91,7 +105,7 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
       console.error('❌ Error creating WebSocket:', err);
       setError('Không thể tạo kết nối WebSocket');
     }
-  }, [autoReconnect, onConnect, onDisconnect, onError, onMessage]);
+  }, [autoReconnect]); // Only depend on autoReconnect, callbacks are handled via refs
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
