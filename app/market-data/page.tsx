@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, TrendingUp, TrendingDown, Activity, Wifi, WifiOff, Zap } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Activity, Wifi, WifiOff, Zap, Clock, Star } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { StockInfo, MessageType } from '@/lib/types';
 import { useMarketDataWebSocket } from '@/hooks/use-market-data-websocket';
+
+// Popular symbols for quick access
+const POPULAR_SYMBOLS = ['VNM', 'HPG', 'VCB', 'FPT', 'VIC', 'MSN', 'VHM', 'TCB'];
 
 export default function MarketDataPage() {
   const [symbol, setSymbol] = useState('VNM');
@@ -19,11 +22,48 @@ export default function MarketDataPage() {
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('');
+  const [recentSymbols, setRecentSymbols] = useState<string[]>([]);
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+
+  const prevPriceRef = useRef<number | null>(null);
+  const hasAutoSubscribed = useRef(false);
+
+  // Load recent symbols from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSymbols');
+    if (saved) {
+      try {
+        setRecentSymbols(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error loading recent symbols:', e);
+      }
+    }
+  }, []);
+
+  // Save symbol to recent history
+  const addToRecentSymbols = useCallback((sym: string) => {
+    setRecentSymbols((prev) => {
+      const filtered = prev.filter((s) => s !== sym);
+      const updated = [sym, ...filtered].slice(0, 8); // Keep max 8
+      localStorage.setItem('recentSymbols', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   // WebSocket connection
   const handleWebSocketMessage = useCallback((data: StockInfo) => {
     console.log('📊 Received WebSocket data:', data);
+
+    // Flash animation on price change
+    if (prevPriceRef.current !== null && data.matchPrice !== prevPriceRef.current) {
+      setPriceFlash(data.matchPrice > prevPriceRef.current ? 'up' : 'down');
+      setTimeout(() => setPriceFlash(null), 600);
+    }
+    prevPriceRef.current = data.matchPrice;
+
     setStockInfo(data);
+    setLastUpdateTime(new Date());
     setIsLoading(false);
   }, []);
 
@@ -74,6 +114,15 @@ export default function MarketDataPage() {
     };
   }, [connectWebSocket, disconnectWebSocket]);
 
+  // Auto-subscribe to VNM when connected (only once)
+  useEffect(() => {
+    if (isConnected && !hasAutoSubscribed.current && symbol === 'VNM') {
+      hasAutoSubscribed.current = true;
+      console.log('🎯 Auto-subscribing to VNM on connect');
+      // The normal auto-subscribe effect will handle it
+    }
+  }, [isConnected, symbol]);
+
   // Auto-subscribe when symbol changes (with debounce)
   useEffect(() => {
     // Don't subscribe if not connected or no symbol
@@ -84,6 +133,7 @@ export default function MarketDataPage() {
     // Clear old data immediately when symbol changes
     setStockInfo(null);
     setSubscriptionStatus('');
+    prevPriceRef.current = null;
 
     // Debounce to avoid subscribing while user is still typing
     const timer = setTimeout(async () => {
@@ -99,6 +149,7 @@ export default function MarketDataPage() {
 
         console.log('✅ Subscription response:', response);
         setSubscriptionStatus(`Đang theo dõi ${symbol.toUpperCase()}`);
+        addToRecentSymbols(symbol.toUpperCase().trim());
       } catch (err: any) {
         setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
         console.error('❌ Error subscribing to market data:', err);
@@ -107,7 +158,7 @@ export default function MarketDataPage() {
     }, 800); // 800ms debounce
 
     return () => clearTimeout(timer);
-  }, [symbol, messageType, isConnected]);
+  }, [symbol, messageType, isConnected, addToRecentSymbols]);
 
   const formatCurrency = (value?: number | null) => {
     if (value == null) return '-';
@@ -132,6 +183,14 @@ export default function MarketDataPage() {
     return formatVolume(value);
   };
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   const getPriceColor = (price?: number, refPrice?: number) => {
     if (price == null || refPrice == null) return 'text-slate-600';
     if (price > refPrice) return 'text-green-600';
@@ -151,6 +210,10 @@ export default function MarketDataPage() {
     return typeof volume === 'string' ? parseInt(volume) : volume;
   };
 
+  const handleSymbolClick = (sym: string) => {
+    setSymbol(sym);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Simple Header */}
@@ -163,6 +226,12 @@ export default function MarketDataPage() {
           <p className="text-slate-500 mt-1">Real-time market streaming</p>
         </div>
         <div className="flex items-center gap-3">
+          {lastUpdateTime && (
+            <div className="text-xs text-slate-500 flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatTime(lastUpdateTime)}
+            </div>
+          )}
           {isConnected ? (
             <Badge variant="default" className="gap-1.5 px-3 py-1.5">
               <Wifi className="h-3.5 w-3.5" />
@@ -177,22 +246,69 @@ export default function MarketDataPage() {
         </div>
       </div>
 
-      {/* Clean Search Form */}
+      {/* Quick Access Popular Symbols */}
       <Card>
         <CardContent className="pt-6">
-          <div>
-            <Label htmlFor="symbol" className="text-sm font-medium text-slate-700 mb-2 block">
-              Mã chứng khoán
-            </Label>
-            <Input
-              id="symbol"
-              placeholder="VNM, HPG, VCB..."
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              className="h-11 text-base font-semibold uppercase"
-              disabled={!isConnected || isInitializing}
-              autoFocus
-            />
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1.5">
+                <Star className="h-4 w-4 text-amber-500" />
+                Mã phổ biến
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {POPULAR_SYMBOLS.map((sym) => (
+                  <Button
+                    key={sym}
+                    size="sm"
+                    variant={symbol === sym ? 'default' : 'outline'}
+                    onClick={() => handleSymbolClick(sym)}
+                    disabled={!isConnected || isInitializing}
+                    className="font-semibold"
+                  >
+                    {sym}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Symbols */}
+            {recentSymbols.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  Đã xem gần đây
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {recentSymbols.map((sym) => (
+                    <Button
+                      key={sym}
+                      size="sm"
+                      variant={symbol === sym ? 'default' : 'ghost'}
+                      onClick={() => handleSymbolClick(sym)}
+                      disabled={!isConnected || isInitializing}
+                      className="font-semibold text-xs"
+                    >
+                      {sym}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Manual Input */}
+            <div>
+              <Label htmlFor="symbol" className="text-sm font-medium text-slate-700 mb-2 block">
+                Hoặc nhập mã khác
+              </Label>
+              <Input
+                id="symbol"
+                placeholder="VNM, HPG, VCB..."
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                className="h-11 text-base font-semibold uppercase"
+                disabled={!isConnected || isInitializing}
+              />
+            </div>
           </div>
 
           {isLoading && (
@@ -220,13 +336,16 @@ export default function MarketDataPage() {
       {/* Stock Info Display */}
       {stockInfo && (
         <div className="space-y-6">
-          {/* Main Price Card */}
-          <Card className={`border-2 ${getPriceBg(stockInfo.matchPrice, stockInfo.referencePrice)}`}>
+          {/* Main Price Card with Flash Animation */}
+          <Card className={`border-2 ${getPriceBg(stockInfo.matchPrice, stockInfo.referencePrice)} transition-all duration-300 ${
+            priceFlash === 'up' ? 'ring-4 ring-green-400 bg-green-100' :
+            priceFlash === 'down' ? 'ring-4 ring-red-400 bg-red-100' : ''
+          }`}>
             <CardContent className="pt-6">
               <div className="flex items-baseline justify-between mb-4">
                 <div>
                   <h2 className="text-sm font-medium text-slate-600 mb-1">{stockInfo.symbol}</h2>
-                  <div className={`text-5xl font-bold ${getPriceColor(stockInfo.matchPrice, stockInfo.referencePrice)}`}>
+                  <div className={`text-5xl font-bold ${getPriceColor(stockInfo.matchPrice, stockInfo.referencePrice)} transition-all duration-300`}>
                     {formatCurrency(stockInfo.matchPrice)}
                   </div>
                 </div>
@@ -341,7 +460,7 @@ export default function MarketDataPage() {
             <div className="flex items-start gap-3 text-sm text-slate-700">
               <Zap className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="space-y-1">
-                <p className="font-medium">Chỉ cần nhập mã chứng khoán để bắt đầu</p>
+                <p className="font-medium">Chọn mã từ danh sách hoặc nhập mã chứng khoán</p>
                 <p className="text-slate-600">Dữ liệu sẽ được cập nhật real-time qua WebSocket</p>
               </div>
             </div>
