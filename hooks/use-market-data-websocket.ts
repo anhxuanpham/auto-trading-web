@@ -52,6 +52,9 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
       // Get WebSocket URL from env or construct from API base URL
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
+      // DEBUG: Log env variable
+      console.log('🔧 API Base URL from env:', apiBaseUrl);
+
       // Convert HTTP(S) to WS(S)
       const wsUrl = apiBaseUrl
         .replace('https://', 'wss://')
