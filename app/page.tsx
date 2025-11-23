@@ -21,16 +21,22 @@ export default function DashboardPage() {
       const data = await apiClient.getPortfolio();
       setPortfolio(data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Lỗi khi tải dữ liệu portfolio');
+      const status = err.response?.status;
+      if (status === 404) {
+        setError('⚠️ Backend chưa implement endpoint /trading/portfolio. Vui lòng implement backend trước.');
+      } else {
+        setError(err.response?.data?.detail || err.message || 'Lỗi khi tải dữ liệu portfolio');
+      }
       console.error('Error fetching portfolio:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPortfolio();
-  }, []);
+  // Don't auto-fetch on mount if backend not ready
+  // useEffect(() => {
+  //   fetchPortfolio();
+  // }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN', {

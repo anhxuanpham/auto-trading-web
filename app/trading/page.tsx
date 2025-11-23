@@ -122,43 +122,53 @@ export default function TradingPage() {
       const quantity = parseInt(buyForm.quantity);
       const price = buyOrderType === 'LO' ? parseFloat(buyForm.price) : 0;
 
-      // Step 1: Analyze risk
-      const riskAnalysis = await analyzeOrderData(
-        symbol,
-        price,
-        quantity,
-        'NB',
-        buyOrderType
-      );
-
-      setBuyRiskAnalysis(riskAnalysis);
-
-      // Step 2: Check if order should be blocked
-      if (riskAnalysis.anomaly_detection.should_block) {
-        setBuyResult({
-          success: false,
-          message: '⛔ Lệnh bị chặn do phát hiện bất thường nghiêm trọng. Vui lòng kiểm tra lại thông tin lệnh.',
-        });
-        setBuyLoading(false);
-        return;
-      }
-
-      // Step 3: Warn on high risk
-      if (riskAnalysis.risk_level === 'extreme' || riskAnalysis.risk_level === 'high') {
-        const confirmed = window.confirm(
-          `⚠️ Cảnh báo rủi ro ${riskAnalysis.risk_level.toUpperCase()}\n\n` +
-          `Risk Score: ${riskAnalysis.risk_score}/100\n` +
-          `Khuyến nghị: ${riskAnalysis.recommendation}\n\n` +
-          `Bạn có chắc chắn muốn tiếp tục đặt lệnh?`
+      // Step 1: Try to analyze risk (skip if backend not ready)
+      let riskAnalysis = null;
+      try {
+        riskAnalysis = await analyzeOrderData(
+          symbol,
+          price,
+          quantity,
+          'NB',
+          buyOrderType
         );
+        setBuyRiskAnalysis(riskAnalysis);
 
-        if (!confirmed) {
+        // Step 2: Check if order should be blocked
+        if (riskAnalysis.anomaly_detection.should_block) {
           setBuyResult({
             success: false,
-            message: 'Lệnh đã bị hủy bởi người dùng do rủi ro cao.',
+            message: '⛔ Lệnh bị chặn do phát hiện bất thường nghiêm trọng. Vui lòng kiểm tra lại thông tin lệnh.',
           });
           setBuyLoading(false);
           return;
+        }
+
+        // Step 3: Warn on high risk
+        if (riskAnalysis.risk_level === 'extreme' || riskAnalysis.risk_level === 'high') {
+          const confirmed = window.confirm(
+            `⚠️ Cảnh báo rủi ro ${riskAnalysis.risk_level.toUpperCase()}\n\n` +
+            `Risk Score: ${riskAnalysis.risk_score}/100\n` +
+            `Khuyến nghị: ${riskAnalysis.recommendation}\n\n` +
+            `Bạn có chắc chắn muốn tiếp tục đặt lệnh?`
+          );
+
+          if (!confirmed) {
+            setBuyResult({
+              success: false,
+              message: 'Lệnh đã bị hủy bởi người dùng do rủi ro cao.',
+            });
+            setBuyLoading(false);
+            return;
+          }
+        }
+      } catch (riskErr: any) {
+        // If AI endpoint not available (404), proceed without risk analysis
+        if (riskErr.response?.status === 404) {
+          console.warn('⚠️ AI risk analysis not available, proceeding without analysis');
+        } else {
+          // For other errors, show warning but allow user to proceed
+          console.error('Risk analysis error:', riskErr);
         }
       }
 
@@ -202,43 +212,53 @@ export default function TradingPage() {
       const quantity = parseInt(sellForm.quantity);
       const price = sellOrderType === 'LO' ? parseFloat(sellForm.price) : 0;
 
-      // Step 1: Analyze risk
-      const riskAnalysis = await analyzeOrderData(
-        symbol,
-        price,
-        quantity,
-        'NS',
-        sellOrderType
-      );
-
-      setSellRiskAnalysis(riskAnalysis);
-
-      // Step 2: Check if order should be blocked
-      if (riskAnalysis.anomaly_detection.should_block) {
-        setSellResult({
-          success: false,
-          message: '⛔ Lệnh bị chặn do phát hiện bất thường nghiêm trọng. Vui lòng kiểm tra lại thông tin lệnh.',
-        });
-        setSellLoading(false);
-        return;
-      }
-
-      // Step 3: Warn on high risk
-      if (riskAnalysis.risk_level === 'extreme' || riskAnalysis.risk_level === 'high') {
-        const confirmed = window.confirm(
-          `⚠️ Cảnh báo rủi ro ${riskAnalysis.risk_level.toUpperCase()}\n\n` +
-          `Risk Score: ${riskAnalysis.risk_score}/100\n` +
-          `Khuyến nghị: ${riskAnalysis.recommendation}\n\n` +
-          `Bạn có chắc chắn muốn tiếp tục đặt lệnh?`
+      // Step 1: Try to analyze risk (skip if backend not ready)
+      let riskAnalysis = null;
+      try {
+        riskAnalysis = await analyzeOrderData(
+          symbol,
+          price,
+          quantity,
+          'NS',
+          sellOrderType
         );
+        setSellRiskAnalysis(riskAnalysis);
 
-        if (!confirmed) {
+        // Step 2: Check if order should be blocked
+        if (riskAnalysis.anomaly_detection.should_block) {
           setSellResult({
             success: false,
-            message: 'Lệnh đã bị hủy bởi người dùng do rủi ro cao.',
+            message: '⛔ Lệnh bị chặn do phát hiện bất thường nghiêm trọng. Vui lòng kiểm tra lại thông tin lệnh.',
           });
           setSellLoading(false);
           return;
+        }
+
+        // Step 3: Warn on high risk
+        if (riskAnalysis.risk_level === 'extreme' || riskAnalysis.risk_level === 'high') {
+          const confirmed = window.confirm(
+            `⚠️ Cảnh báo rủi ro ${riskAnalysis.risk_level.toUpperCase()}\n\n` +
+            `Risk Score: ${riskAnalysis.risk_score}/100\n` +
+            `Khuyến nghị: ${riskAnalysis.recommendation}\n\n` +
+            `Bạn có chắc chắn muốn tiếp tục đặt lệnh?`
+          );
+
+          if (!confirmed) {
+            setSellResult({
+              success: false,
+              message: 'Lệnh đã bị hủy bởi người dùng do rủi ro cao.',
+            });
+            setSellLoading(false);
+            return;
+          }
+        }
+      } catch (riskErr: any) {
+        // If AI endpoint not available (404), proceed without risk analysis
+        if (riskErr.response?.status === 404) {
+          console.warn('⚠️ AI risk analysis not available, proceeding without analysis');
+        } else {
+          // For other errors, show warning but allow user to proceed
+          console.error('Risk analysis error:', riskErr);
         }
       }
 

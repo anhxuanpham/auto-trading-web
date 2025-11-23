@@ -106,7 +106,12 @@ export default function MarketDataPage() {
         setSubscribedSymbols(response.symbols);
         console.log('📋 Current subscriptions:', response.symbols);
       } catch (err: any) {
-        console.error('❌ Error fetching subscriptions:', err);
+        // Silently handle 404 if backend endpoint not implemented yet
+        if (err.response?.status === 404) {
+          console.warn('⚠️ Backend endpoint /market-data/subscriptions not implemented yet');
+        } else {
+          console.error('❌ Error fetching subscriptions:', err);
+        }
       }
     };
 
@@ -142,7 +147,12 @@ export default function MarketDataPage() {
         setSubscribedSymbols(response.symbols);
         addToRecentSymbols(symbolUpper);
       } catch (err: any) {
-        setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
+        const status = err.response?.status;
+        if (status === 404) {
+          setError('⚠️ Backend chưa implement endpoint /market-data/subscribe. WebSocket đã kết nối nhưng chưa có API subscribe.');
+        } else {
+          setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
+        }
         console.error('❌ Error subscribing to market data:', err);
         setIsLoading(false);
       }
