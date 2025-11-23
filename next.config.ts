@@ -1,14 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8000/:path*',
-      },
-    ];
-  },
+  // Rewrites removed - using NEXT_PUBLIC_API_BASE_URL directly
+  // This allows Cloudflare Tunnel to work correctly
 };
 
 export default nextConfig;
