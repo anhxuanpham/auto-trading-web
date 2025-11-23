@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, TrendingUp, TrendingDown, Activity, Wifi, WifiOff, Zap, Clock, Star } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Activity, Wifi, WifiOff, Zap, Clock, Star, List } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import { StockInfo, MessageType } from '@/lib/types';
+import { StockInfo } from '@/lib/types';
 import { useMarketDataWebSocket } from '@/hooks/use-market-data-websocket';
 
 // Popular symbols for quick access
@@ -16,18 +16,16 @@ const POPULAR_SYMBOLS = ['VNM', 'HPG', 'VCB', 'FPT', 'VIC', 'MSN', 'VHM', 'TCB']
 
 export default function MarketDataPage() {
   const [symbol, setSymbol] = useState('VNM');
-  const [messageType, setMessageType] = useState<MessageType>('STOCK_INFO');
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('');
+  const [subscribedSymbols, setSubscribedSymbols] = useState<string[]>([]);
   const [recentSymbols, setRecentSymbols] = useState<string[]>([]);
   const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
   const prevPriceRef = useRef<number | null>(null);
-  const hasAutoSubscribed = useRef(false);
 
   // Load recent symbols from localStorage
   useEffect(() => {
@@ -88,40 +86,32 @@ export default function MarketDataPage() {
     },
   });
 
-  // Initialize market data connection on mount
+  // Initialize WebSocket connection on mount
   useEffect(() => {
-    const initialize = async () => {
-      try {
-        setIsInitializing(true);
-        console.log('🔧 Initializing market data connection...');
-        await apiClient.initializeMarketData();
-        console.log('✅ Market data initialized');
-
-        // Connect WebSocket after initialization
-        connectWebSocket();
-      } catch (err: any) {
-        console.error('❌ Failed to initialize market data:', err);
-        setError(err.response?.data?.detail || err.message || 'Lỗi khởi tạo kết nối');
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    initialize();
+    console.log('🔧 Connecting to WebSocket...');
+    connectWebSocket();
 
     return () => {
       disconnectWebSocket();
     };
   }, [connectWebSocket, disconnectWebSocket]);
 
-  // Auto-subscribe to VNM when connected (only once)
+  // Fetch current subscriptions when connected
   useEffect(() => {
-    if (isConnected && !hasAutoSubscribed.current && symbol === 'VNM') {
-      hasAutoSubscribed.current = true;
-      console.log('🎯 Auto-subscribing to VNM on connect');
-      // The normal auto-subscribe effect will handle it
-    }
-  }, [isConnected, symbol]);
+    const fetchSubscriptions = async () => {
+      if (!isConnected) return;
+
+      try {
+        const response = await apiClient.getSubscriptions();
+        setSubscribedSymbols(response.symbols);
+        console.log('📋 Current subscriptions:', response.symbols);
+      } catch (err: any) {
+        console.error('❌ Error fetching subscriptions:', err);
+      }
+    };
+
+    fetchSubscriptions();
+  }, [isConnected]);
 
   // Auto-subscribe when symbol changes (with debounce)
   useEffect(() => {
@@ -141,15 +131,16 @@ export default function MarketDataPage() {
         setIsLoading(true);
         setError(null);
 
-        console.log('🔄 Auto-subscribing to:', symbol.toUpperCase().trim());
-        const response = await apiClient.subscribeMarketData({
-          messageType,
-          symbol: symbol.toUpperCase().trim(),
-        });
+        const symbolUpper = symbol.toUpperCase().trim();
+        console.log('🔄 Subscribing to:', symbolUpper);
+
+        // Use new array-based subscribe API
+        const response = await apiClient.subscribeSymbols([symbolUpper]);
 
         console.log('✅ Subscription response:', response);
-        setSubscriptionStatus(`Đang theo dõi ${symbol.toUpperCase()}`);
-        addToRecentSymbols(symbol.toUpperCase().trim());
+        setSubscriptionStatus(`Đang theo dõi ${response.count} mã`);
+        setSubscribedSymbols(response.symbols);
+        addToRecentSymbols(symbolUpper);
       } catch (err: any) {
         setError(err.response?.data?.detail || err.message || 'Lỗi khi đăng ký dữ liệu');
         console.error('❌ Error subscribing to market data:', err);
@@ -158,7 +149,7 @@ export default function MarketDataPage() {
     }, 800); // 800ms debounce
 
     return () => clearTimeout(timer);
-  }, [symbol, messageType, isConnected, addToRecentSymbols]);
+  }, [symbol, isConnected, addToRecentSymbols]);
 
   const formatCurrency = (value?: number | null) => {
     if (value == null) return '-';
@@ -240,7 +231,7 @@ export default function MarketDataPage() {
           ) : (
             <Badge variant="destructive" className="gap-1.5 px-3 py-1.5">
               <WifiOff className="h-3.5 w-3.5" />
-              {isInitializing ? 'Connecting' : 'Offline'}
+              Offline
             </Badge>
           )}
         </div>
@@ -262,7 +253,7 @@ export default function MarketDataPage() {
                     size="sm"
                     variant={symbol === sym ? 'default' : 'outline'}
                     onClick={() => handleSymbolClick(sym)}
-                    disabled={!isConnected || isInitializing}
+                    disabled={!isConnected}
                     className="font-semibold"
                   >
                     {sym}
@@ -270,6 +261,23 @@ export default function MarketDataPage() {
                 ))}
               </div>
             </div>
+
+            {/* Subscribed Symbols */}
+            {subscribedSymbols.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-1.5">
+                  <List className="h-4 w-4 text-green-500" />
+                  Đang theo dõi ({subscribedSymbols.length})
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {subscribedSymbols.map((sym) => (
+                    <Badge key={sym} variant="outline" className="font-semibold">
+                      {sym}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Recent Symbols */}
             {recentSymbols.length > 0 && (
@@ -285,7 +293,7 @@ export default function MarketDataPage() {
                       size="sm"
                       variant={symbol === sym ? 'default' : 'ghost'}
                       onClick={() => handleSymbolClick(sym)}
-                      disabled={!isConnected || isInitializing}
+                      disabled={!isConnected}
                       className="font-semibold text-xs"
                     >
                       {sym}
@@ -306,7 +314,7 @@ export default function MarketDataPage() {
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                 className="h-11 text-base font-semibold uppercase"
-                disabled={!isConnected || isInitializing}
+                disabled={!isConnected}
               />
             </div>
           </div>

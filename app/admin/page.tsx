@@ -53,8 +53,10 @@ export default function AdminPage() {
     setUpdateResult(null);
 
     try {
-      apiClient.setAdminSecret(localAdminSecret);
-      const result = await apiClient.updateTradingToken(newTradingToken);
+      const result = await apiClient.updateTradingToken({
+        newToken: newTradingToken,
+        adminSecret: localAdminSecret,
+      });
 
       setUpdateResult({
         success: true,
@@ -82,7 +84,7 @@ export default function AdminPage() {
       ]);
 
       setHealthStatus({
-        main: mainHealth.status === 'fulfilled' ? mainHealth.value : false,
+        main: mainHealth.status === 'fulfilled' && mainHealth.value?.status === 'ok',
         trading: tradingHealth.status === 'fulfilled' ? tradingHealth.value : null,
         admin: adminHealth.status === 'fulfilled' ? adminHealth.value : null,
       });

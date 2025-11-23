@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useTradingStore } from '@/lib/store';
-import { Order } from '@/lib/types';
+import { OrderDetail } from '@/lib/types';
 import { format } from 'date-fns';
 
 export default function OrdersPage() {
@@ -136,8 +136,8 @@ export default function OrdersPage() {
                 </TableHeader>
                 <TableBody>
                   {orders.map((order) => (
-                    <TableRow key={order.orderId}>
-                      <TableCell className="font-mono text-xs">{order.orderId}</TableCell>
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono text-xs">{order.id}</TableCell>
                       <TableCell className="font-bold">{order.symbol}</TableCell>
                       <TableCell>{getSideBadge(order.side)}</TableCell>
                       <TableCell>{getOrderTypeBadge(order.orderType)}</TableCell>
@@ -148,9 +148,9 @@ export default function OrdersPage() {
                       <TableCell className="text-right font-medium">
                         {order.filledQuantity.toLocaleString()}
                       </TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>{getStatusBadge(order.orderStatus)}</TableCell>
                       <TableCell className="text-sm">{formatDateTime(order.createdAt)}</TableCell>
-                      <TableCell className="text-sm">{formatDateTime(order.updatedAt)}</TableCell>
+                      <TableCell className="text-sm">{order.updatedAt ? formatDateTime(order.updatedAt) : '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

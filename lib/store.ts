@@ -1,22 +1,22 @@
 import { create } from 'zustand';
-import { Portfolio, Order } from './types';
+import { Deal, OrderDetail } from './types';
 
 interface TradingStore {
-  portfolio: Portfolio | null;
-  orders: Order[];
+  portfolio: Deal[];
+  orders: OrderDetail[];
   isLoading: boolean;
   error: string | null;
   adminSecret: string;
 
-  setPortfolio: (portfolio: Portfolio | null) => void;
-  setOrders: (orders: Order[]) => void;
+  setPortfolio: (portfolio: Deal[]) => void;
+  setOrders: (orders: OrderDetail[]) => void;
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   setAdminSecret: (secret: string) => void;
 }
 
 export const useTradingStore = create<TradingStore>((set) => ({
-  portfolio: null,
+  portfolio: [],
   orders: [],
   isLoading: false,
   error: null,
