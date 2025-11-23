@@ -49,9 +49,14 @@ export function useMarketDataWebSocket(options: UseMarketDataWebSocketOptions = 
 
   const connect = useCallback(() => {
     try {
-      // Use ws:// for localhost, wss:// for production
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.hostname}:8000/market-data/ws`;
+      // Get WebSocket URL from env or construct from API base URL
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
+      // Convert HTTP(S) to WS(S)
+      const wsUrl = apiBaseUrl
+        .replace('https://', 'wss://')
+        .replace('http://', 'ws://')
+        + '/market-data/ws';
 
       console.log('🔌 Connecting to WebSocket:', wsUrl);
       const ws = new WebSocket(wsUrl);
